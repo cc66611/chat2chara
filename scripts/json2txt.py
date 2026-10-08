@@ -27,8 +27,16 @@ from pathlib import Path
 
 def load_messages(path):
     """载入 JSON 并自动定位消息数组。"""
-    with open(path, encoding="utf-8") as f:
-        raw = json.load(f)
+    try:
+        with open(path, encoding="utf-8") as f:
+            raw = json.load(f)
+    except json.JSONDecodeError as e:
+        sys.exit(f"这不是合法的 JSON 文件：{path}\n"
+                 f"  出错位置：第 {e.lineno} 行第 {e.colno} 列 —— {e.msg}\n"
+                 f"  提示：导出聊天记录时要选「JSON」格式。HTML / CSV / MHT 都要先转换。")
+    except UnicodeDecodeError:
+        sys.exit(f"文件不是 UTF-8 编码：{path}\n"
+                 f"  提示：用记事本「另存为」选 UTF-8，或换一种导出格式。")
 
     if isinstance(raw, list):
         return raw
@@ -43,7 +51,10 @@ def load_messages(path):
         if lists:
             return max(lists, key=len)
 
-    raise ValueError("无法识别 JSON 结构，请检查输入文件（需要是消息数组）")
+    keys = list(raw)[:10] if isinstance(raw, dict) else "（不是字典）"
+    sys.exit(f"认不出这份 JSON 的结构：{path}\n"
+             f"  最外层应该是消息数组 [{{...}}, ...]，或者包在 messages / data / chat / records 里。\n"
+             f"  这份文件最外层是 {type(raw).__name__}，里面的键是：{keys}")
 
 
 def pick(msg, *keys):
@@ -117,6 +128,10 @@ def main():
 
     dst = Path(args.output) if args.output else src.with_suffix(".txt")
 
+    if not msgs:
+        sys.exit(f"文件里没找到任何消息：{src}\n"
+                 f"  提示：JSON 最外层应该是消息数组，或包在 messages / data / chat 字段里。")
+
     out_lines = []
     kept = 0
     skipped = 0
@@ -137,6 +152,14 @@ def main():
         out_lines.append(content)
         out_lines.append("")
         kept += 1
+
+    if kept == 0:
+        sys.exit(f"载入 {len(msgs)} 条，但一条都没转换出来（全部跳过）。\n"
+                 f"  常见原因：\n"
+                 f"    1. 时间字段名不在候选键里（支持 time / timestamp / createTime / date / ts）\n"
+                 f"    2. 内容字段名不在候选键里（支持 content / text / message / msg）\n"
+                 f"    3. 全是图片/语音这类非文本消息（可加 --keep-non-text 保留占位）\n"
+                 f"  先跑一次 --list-senders 看看结构对不对。")
 
     dst.write_text("\n".join(out_lines), encoding="utf-8")
 

@@ -31,6 +31,8 @@
 
 ## 工作流
 
+两条素材都能进这条管道：**真人聊天记录**（JSON）走 `json2txt.py`，**动画 / 影视字幕**（.srt / .ass）走 `srt2txt.py`。从第二步开始完全一样。
+
 ```
 聊天记录导出文件（JSON）
         ↓
@@ -189,8 +191,38 @@ python sample.py -i ../examples/demo_chat.txt \
 python json2txt.py -i your_export.json --list-senders
 ```
 
----
+### 换成字幕（做二次元角色）
 
+上面那条是「复刻某个真人」的路线。如果你要做的是**动画 / 游戏 / 小说里的角色**，
+素材换成字幕就行——同一张卡、同一套统计，但**完全不涉及真人**。
+
+```bash
+# 1) 先看这份字幕里有哪些说话人（字幕通常带「名字：台词」前缀）
+python srt2txt.py -i ../subs/ep01.srt --list-speakers
+
+# 2) 转成管道格式。--date 给这一集打个日期
+python srt2txt.py -i ../subs/ep01.srt -o ../subs/ep01.txt --date 2024-01-01
+
+# 3) 几集合起来统计（后面和聊天记录路线一模一样）
+python analyze.py -i ../subs/all.txt -o ../subs/stats.txt --char-name "星野"
+```
+
+**字幕来源的九维度，有一个要忽略：**
+
+| 维度 | 对字幕 |
+|---|---|
+| [1] 消息长度 / [4] 表情 / [5] emoji | ✅ 一样有效 |
+| [6] 口头禅 / [7] 高频词 / [8] 句尾 | ✅ 一样有效 |
+| [9] 连发密度 | ✅ 一样有效 |
+| [2] 每月消息量 | ⚠️ 变成「**每集台词量**」，能看出角色哪集戏份多 |
+| [3] 活跃时段 | ❌ **无意义**——字幕时间戳是剧内时间，不是作息 |
+
+九个维度里八个能用，写卡时跳过 [3] 就行。细节见 [docs/04-subtitle-source.md](docs/04-subtitle-source.md)。
+
+> **边界**：字幕（动画 / 影视 / 广播剧）没问题。**游戏文本解包要避开**——
+> 那涉及逆向工程，性质和「去读微信数据库」是一回事。
+
+---
 ## 三条调优铁律
 
 这三条是实测踩出来的，比脚本本身更值钱。
@@ -291,6 +323,8 @@ chat2card/
 │   ├── sample.py            时间分层加权采样
 │   ├── validate_card.py     角色卡校验 + 结构检查
 │   ├── deploy_card.js       部署到 SillyTavern
+│   ├── srt2txt.py           字幕（.srt/.ass）→ 管道格式
+│   ├── check_privacy.py     发布前隐私自检
 │   └── make_demo_data.py    生成虚构 demo 数据
 ├── templates/
 │   └── chara_card_v2_blank.json   带注释的空白角色卡模板
@@ -299,7 +333,8 @@ chat2card/
 └── docs/
     ├── 01-data-pipeline.md   数据管道详解
     ├── 02-card-authoring.md  角色卡撰写指南
-    └── 03-tuning-rules.md    三条铁律的完整推导
+    ├── 03-tuning-rules.md    三条铁律的完整推导
+    └── 04-subtitle-source.md 字幕来源（做二次元角色）
 ```
 
 ---
@@ -333,6 +368,21 @@ chat2card/
 
 ---
 
+## 发布 / 提交之前
+
+要 fork、要往仓库里加自己的东西、或者 push 之前，**先跑一次自检**：
+
+```bash
+python scripts/check_privacy.py
+```
+
+它会扫一遍**将要交给 git 的文件**，看有没有夹带手机号、微信号、本机路径、密钥之类的东西。
+被 `.gitignore` 忽略的文件不扫——那些本来就进不了仓库。命中会列出文件、行号和内容并返回退出码 1；干净则返回 0。
+
+> ⚠️ **它挡不住 git 历史。** 真实数据一旦提交过，删掉文件也还留在历史里。
+> 所以顺序永远是：**先确认干净 → 再 `git add`**。
+
+---
 ## License
 
 MIT

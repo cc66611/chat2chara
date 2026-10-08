@@ -37,7 +37,18 @@ def main():
     warn = []
 
     try:
-        card = json.loads(Path(args.input).read_text(encoding="utf-8"))
+        _p = Path(args.input)
+        if not _p.exists():
+            raise SystemExit(f"角色卡文件不存在：{_p}\n"
+                             f"  提示：可以先拿 templates/chara_card_v2_blank.json 试跑一遍。")
+        card = json.loads(_p.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        msg = (f"这不是合法的 JSON：{args.input}\n"
+               f"  第 {e.lineno} 行第 {e.colno} 列 —— {e.msg}\n"
+               f"  提示：角色卡必须是完整的一段 JSON，常见的坑是结尾多了逗号。")
+        if args.output:
+            Path(args.output).write_text(msg, encoding="utf-8")
+        raise SystemExit(msg)
     except Exception as e:
         msg = f"JSON 解析失败：{e}"
         if args.output:

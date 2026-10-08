@@ -48,6 +48,10 @@ def main():
 
     random.seed(args.seed)
 
+    src = Path(args.input)
+    if not src.exists():
+        raise SystemExit(f"输入文件不存在：{src}\n"
+                         f"  提示：先用 json2txt.py（或 srt2txt.py）把原始记录转成标准 txt。")
     records = parse_txt(args.input)
     items = [(ts[:7], s, c) for ts, s, c in records if ts and c]
     total = len(items)

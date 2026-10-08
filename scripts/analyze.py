@@ -67,6 +67,17 @@ def main():
     # 自动判断双方
     counter = Counter(s for _, s, _ in records)
     ranked = counter.most_common()
+    # 防呆：名字写错时，旧版本会静默产出一份空报告（所有维度都是空的），
+    # 用户却看到 "OK"。这里直接拦下来并列出数据里真正有哪些发言人。
+    names = [n for n, _ in ranked]
+    _tip = ("实际出现的发言人：" + "、".join(names[:12]) +
+            (" 等" if len(names) > 12 else ""))
+    if args.char_name and args.char_name not in names:
+        raise SystemExit(f"数据里没有「{args.char_name}」这个人。\n  {_tip}\n"
+                         f"  先用 json2txt.py --list-senders（或 srt2txt.py --list-speakers）确认名字。")
+    if args.user_name and args.user_name not in names:
+        raise SystemExit(f"数据里没有「{args.user_name}」这个人。\n  {_tip}")
+
     char = args.char_name or (ranked[0][0] if ranked else "")
     user = args.user_name or (ranked[1][0] if len(ranked) > 1 else "")
     # 若显式给了 char 名，user 默认取除 char 外最多者
