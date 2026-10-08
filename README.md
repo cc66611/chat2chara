@@ -318,6 +318,35 @@ node scripts/deploy_card.js -i 你的角色卡.json \
 node scripts/deploy_card.js -i card.json -d <目录> --dry-run
 ```
 
+### 另一种方式：做成 PNG 卡
+
+上面那个脚本是把 JSON 拷进酒馆的目录。**如果你想要一张能直接拖进去的卡**（还自带头像），
+把 JSON 打包成 PNG：
+
+```bash
+python json2png.py -i 你的角色卡.json -o 你的角色卡.png --avatar 头像.png
+```
+
+没有头像图也能跑——会生成一张渐变占位图，之后在酒馆里再换。
+
+PNG 卡的原理是：角色卡数据以 base64 塞在图片的 `tEXt` 文本块里。这个脚本**两个块都写**
+（`chara` 是 V2、`ccv3` 是 V3），新旧版本的酒馆都能读出来。
+
+> ⚠️ **别用微信发 PNG 卡。** 微信会重新压缩图片，`tEXt` 块会丢，卡就废了。要发就发 JSON。
+
+### 关于卡片规范：V2 还是 V3
+
+酒馆的卡片规范有三代，**三代都能导入**：
+
+| 版本 | 特点 | 什么时候用 |
+|---|---|---|
+| V1 | 六个平铺字段，没有世界书、没有多开场白 | 老卡 |
+| **V2** | 信封结构 + 世界书 + 多开场白 | **本项目的输出。所有版本都能读，最稳** |
+| V3 | 在 V2 之上加 `assets`（立绘 / 语音）、`nickname`、多语言备注、`.charx` 容器 | 需要立绘或语音时 |
+
+酒馆**读 V3 优先**，但 V3 本身就向后兼容 V2——所以只带 V2 字段的卡完全能用。
+`validate_card.py` 三个版本的 `spec` 都认，会直接告诉你正在校验哪一种。
+
 ---
 
 ## 目录结构
@@ -331,6 +360,7 @@ chat2card/
 │   ├── validate_card.py     角色卡校验 + 结构检查
 │   ├── deploy_card.js       部署到 SillyTavern
 │   ├── srt2txt.py           字幕（.srt/.ass）→ 管道格式
+│   ├── json2png.py          角色卡 JSON → PNG 卡（拖进酒馆即用）
 │   ├── check_privacy.py     发布前隐私自检
 │   └── make_demo_data.py    生成虚构 demo 数据
 ├── templates/

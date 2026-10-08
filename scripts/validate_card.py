@@ -59,9 +59,15 @@ def main():
     d = card.get("data", card)
 
     L.append("=== 角色卡校验报告 ===")
-    L.append(f"spec: {spec or '(未声明)'}")
-    if spec != "chara_card_v2":
-        warn.append("spec 不是 chara_card_v2，SillyTavern 可能不识别")
+    L.append(f"spec: {spec or '(未声明，按 v1 平铺字段处理)'}")
+    if spec == "chara_card_v3":
+        L.append("      → V3。SillyTavern 现版本读 V3 优先；老版本会回落到 V2 字段。")
+    elif spec == "chara_card_v2":
+        L.append("      → V2。所有版本都能读，最稳。")
+    elif spec in ("", "chara_card_v1"):
+        L.append("      → V1（平铺字段）。能导入，但不支持世界书 / 多开场白。")
+    else:
+        warn.append(f"spec 是「{spec}」，不属于已知的 v1 / v2 / v3 —— SillyTavern 可能不识别")
     L.append(f"name: {d.get('name', '(空)')}")
     L.append("")
 
