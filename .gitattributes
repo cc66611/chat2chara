@@ -1,0 +1,9 @@
+# 统一换行符：仓库里一律存 LF，各平台检出时由 git 自行处理
+# 这样 Windows 贡献者不会把 CRLF 混进来
+* text=auto
+
+# 二进制文件不要做任何转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
