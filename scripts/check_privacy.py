@@ -10,7 +10,7 @@ push 之前跑一次：扫一遍**将要交给 git 的文件**，看有没有夹
 
 用法：
     python check_privacy.py
-    python check_privacy.py --path D:\\chat2card
+    python check_privacy.py --path D:\\chat2chara
 退出码：0 = 干净；1 = 有命中，先处理再提交。
 """
 import argparse

@@ -1,6 +1,8 @@
-# chat2card
+# chat2chara
 
 把聊天记录变成一张能用的 AI 角色卡——**用真实数据的统计特征写，而不是凭印象编**。
+
+**如果你手上有一份几万条的对话记录**，而现成的编卡器只能让你「描述一个人」——那描述不出那种味道。**这个工具是给你做的。**
 
 ![同一份语料，凭印象写 vs 跑了 analyze 再写](assets/compare-impression-vs-data.png)
 
@@ -10,6 +12,8 @@
 你写「平均每 52 条才出现 1 次」，它才知道什么叫稀有。这就是这个项目的全部差别。
 
 从一份聊天记录导出文件（或一份字幕），生成符合 `chara_card_v2` 规范的角色卡，导入 SillyTavern（酒馆）即可直接对话。
+
+> 🧰 你需要的：**Python** · 一份聊天记录（或一份字幕）· 大约半小时
 
 ---
 
@@ -113,8 +117,8 @@ python --version
 **用 Git 的（推荐）：**
 
 ```bash
-git clone https://github.com/cc66611/chat2card.git
-cd chat2card
+git clone https://github.com/cc66611/chat2chara.git
+cd chat2chara
 ```
 
 **不想用 Git 的：** 在仓库页面点绿色的 `Code` 按钮 → `Download ZIP`，解压到你喜欢的位置就行。
@@ -352,7 +356,7 @@ PNG 卡的原理是：角色卡数据以 base64 塞在图片的 `tEXt` 文本块
 ## 目录结构
 
 ```
-chat2card/
+chat2chara/
 ├── scripts/
 │   ├── json2txt.py          聊天记录 JSON → 标准管道格式
 │   ├── analyze.py           九维度全量风格统计（核心）
