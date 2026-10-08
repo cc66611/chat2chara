@@ -88,6 +88,14 @@ def main():
     text = src.read_text(encoding="utf-8-sig", errors="replace")
     items = parse_ass(text) if src.suffix.lower() == ".ass" else parse_srt(text)
 
+    if not items:
+        raise SystemExit(
+            f"在这个文件里没找到任何字幕条目：{src}\n"
+            f"  它看起来不是字幕文件。字幕的每一条都有一行时间轴，长这样：\n"
+            f"      00:00:01,000 --> 00:00:03,500\n"
+            f"  如果你手上是聊天记录（三行一组：时间 / 发言人 / 内容），"
+            f"请改用 json2txt.py，它才是处理聊天记录的。")
+
     rows = []
     for raw_t, body in items:
         m = SPK_RE.match(body)
