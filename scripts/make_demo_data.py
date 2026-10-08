@@ -17,6 +17,17 @@ import random
 from datetime import datetime, timedelta
 from pathlib import Path
 
+# ---- 输出语言（--lang zh|en，默认 zh）----
+LANG = "zh"
+
+
+def T(zh, en=None, **kw):
+    """面向用户的文案。默认返回中文；--lang en 时返回英文（没给英文就回退中文）。
+    两种语言都用 {name} 形式的占位符，参数走 kw；没有 kw 就不做格式化。"""
+    s = en if (LANG == "en" and en) else zh
+    return s.format(**kw) if kw else s
+
+
 random.seed(42)
 
 CHAR = "小鱼"
@@ -53,7 +64,11 @@ def main():
     ap = argparse.ArgumentParser(description="生成虚构 demo 聊天记录")
     ap.add_argument("-o", "--output", default="demo_chat.json")
     ap.add_argument("-n", "--count", type=int, default=3000, help="生成消息条数")
+    ap.add_argument("--lang", choices=["zh", "en"], default="zh",
+                    help="输出语言：zh（默认）中文 / en English")
     args = ap.parse_args()
+    global LANG
+    LANG = args.lang
 
     start = datetime(2024, 3, 1, 20, 0, 0)
     msgs = []
@@ -75,7 +90,8 @@ def main():
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(msgs, ensure_ascii=False, indent=1),
                    encoding="utf-8")
-    print(f"生成 {len(msgs)} 条虚构消息 -> {out}")
+    print(T("生成 {n} 条虚构消息 -> {o}", "Generated {n} fictional messages -> {o}",
+            n=len(msgs), o=out))
 
 
 if __name__ == "__main__":

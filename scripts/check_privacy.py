@@ -19,6 +19,22 @@ import subprocess
 import sys
 from pathlib import Path
 
+# ---- 输出语言（--lang zh|en，默认 zh）----
+LANG = "zh"
+
+
+def T(zh, en=None, **kw):
+    """面向用户的文案。默认返回中文；--lang en 时返回英文（没给英文就回退中文）。"""
+    s = en if (LANG == "en" and en) else zh
+    return s.format(**kw) if kw else s
+
+
+LABEL_EN = {
+    "手机号": "phone number", "身份证": "national ID", "邮箱": "email",
+    "微信号": "WeChat ID", "本机路径": "local path",
+    "IP 地址": "IP address", "疑似密钥": "possible secret",
+}
+
 RULES = [
     ("手机号",   re.compile(r"(?<!\d)1[3-9]\d{9}(?!\d)")),
     ("身份证",   re.compile(r"(?<!\d)\d{17}[\dXx](?!\d)")),
@@ -72,11 +88,17 @@ def tracked_files(root: Path):
 def main():
     ap = argparse.ArgumentParser(description="发布前隐私自检")
     ap.add_argument("--path", default=str(Path(__file__).resolve().parent.parent))
+    ap.add_argument("--lang", choices=["zh", "en"], default="zh",
+                    help="输出语言：zh（默认）中文 / en English")
     args = ap.parse_args()
+    global LANG
+    LANG = args.lang
     root = Path(args.path).resolve()
 
     items = tracked_files(root)
-    print(f"=== 隐私自检：{len(items)} 个文件（已排除 .gitignore 忽略的）===")
+    print(T("=== 隐私自检：{n} 个文件（已排除 .gitignore 忽略的）===",
+            "=== Privacy scan: {n} files (those ignored by .gitignore are excluded) ===",
+            n=len(items)))
 
     hits = []
     for p, rel in items:
@@ -90,13 +112,15 @@ def main():
                     hits.append((rel, i, label, m.group(0)[:60]))
 
     if not hits:
-        print("✓ 未发现可疑内容。")
+        print(T("✓ 未发现可疑内容。", "✓ Nothing suspicious found."))
         return 0
 
-    print(f"\n✗ 发现 {len(hits)} 处，逐条确认后再提交：\n")
+    print(T("\n✗ 发现 {n} 处，逐条确认后再提交：\n",
+            "\n✗ {n} hit(s) found — confirm each one before committing:\n", n=len(hits)))
     for rel, i, label, val in hits:
-        print(f"  [{label}] {rel}:{i}  {val}")
-    print("\n如果这些是示例数据里的假信息，请确认它确实不指向任何真实的人。")
+        print(f"  [{T(label, LABEL_EN.get(label))}] {rel}:{i}  {val}")
+    print(T("\n如果这些是示例数据里的假信息，请确认它确实不指向任何真实的人。",
+            "\nIf these are fake values inside demo data, just make sure they do not point at a real person."))
     return 1
 
 

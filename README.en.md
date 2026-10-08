@@ -72,7 +72,7 @@ Chat log export (JSON)
 
 ![analyze.py output](assets/screenshot-analyze.en.png)
 
-> **Language note:** the scripts print their status in Chinese by default. `analyze.py` accepts `--lang en` for an English report — that's what you see above. The other scripts print short status lines; the tables below give their English meaning.
+> **Language note:** every script prints in Chinese by default and accepts `--lang en` for English output. The screenshot above was produced by running `analyze.py --lang en` on the bundled demo data.
 >
 > This is real output from `analyze.py` (numbers come from the fictional demo data shipped with the repo).
 > All nine dimensions are backed by numbers — copy them into the card and your settings are *evidence-based* instead of *impression-based*.
@@ -150,7 +150,7 @@ python json2txt.py -i ../examples/demo_chat.json \
 # 3. full statistics
 python analyze.py -i ../examples/demo_chat.txt \
                   -o ../examples/demo_stats.txt \
-                  --char-name "小鱼" --user-name "阿木"
+                  --lang en --char-name "小鱼" --user-name "阿木"
 
 # 4. sample
 python sample.py -i ../examples/demo_chat.txt \
@@ -161,10 +161,10 @@ python sample.py -i ../examples/demo_chat.txt \
 
 | Command | You should see |
 |---|---|
-| 1 | `生成 3000 条虚构消息 -> ...` (3000 fictional messages generated) |
-| 2 | `载入 3000 条，写出 3000 条，跳过 0 条` (3000 read, 3000 written, 0 skipped) |
-| 3 | `OK -> ...` plus `角色「小鱼」/ 本人「阿木」，共 3000 条` |
-| 4 | `采样 ... 条（N 个月）` (sampled N messages across N months) |
+| 1 | `Generated 3000 fictional messages -> ...` |
+| 2 | `Loaded 3000, wrote 3000, skipped 0` |
+| 3 | `OK -> ...` plus `Character "小鱼" / User "阿木", 3000 messages total` |
+| 4 | `Sampled 3000 / 3000 messages (4 months)` |
 
 **Then open `examples/demo_stats.txt`** — that is a complete style profile, and it's the thing this project hands you.
 

@@ -24,6 +24,16 @@ import sys
 import zlib
 from pathlib import Path
 
+# ---- 输出语言（--lang zh|en，默认 zh）----
+LANG = "zh"
+
+
+def T(zh, en=None, **kw):
+    """面向用户的文案。默认返回中文；--lang en 时返回英文（没给英文就回退中文）。"""
+    s = en if (LANG == "en" and en) else zh
+    return s.format(**kw) if kw else s
+
+
 SIG = b"\x89PNG\r\n\x1a\n"
 
 
@@ -66,7 +76,7 @@ def embed(png_bytes, pairs):
     """把若干 (keyword, text) 插到 IEND 之前。"""
     iend = png_bytes.rindex(b"IEND") - 4
     if iend < 8:
-        sys.exit("这个 PNG 不完整（找不到 IEND）")
+        sys.exit(T("这个 PNG 不完整（找不到 IEND）", "This PNG is incomplete (no IEND chunk found)"))
     extra = b"".join(text_chunk(k, v) for k, v in pairs)
     return png_bytes[:iend] + extra + png_bytes[iend:]
 
@@ -76,26 +86,35 @@ def main():
     ap.add_argument("-i", "--input", required=True, help="角色卡 JSON")
     ap.add_argument("-o", "--output", required=True, help="输出的 PNG 路径")
     ap.add_argument("--avatar", default="", help="头像图片（PNG）。不给就生成渐变占位图")
+    ap.add_argument("--lang", choices=["zh", "en"], default="zh",
+                    help="输出语言：zh（默认）中文 / en English")
     args = ap.parse_args()
+    global LANG
+    LANG = args.lang
 
     src = Path(args.input)
     if not src.exists():
-        sys.exit(f"角色卡文件不存在：{src}")
+        sys.exit(T("角色卡文件不存在：{p}", "Character card file not found: {p}", p=src))
     try:
         card = json.loads(src.read_text(encoding="utf-8"))
     except json.JSONDecodeError as e:
-        sys.exit(f"这不是合法的 JSON：{src}\n  第 {e.lineno} 行第 {e.colno} 列 —— {e.msg}")
+        sys.exit(T("这不是合法的 JSON：{p}\n  第 {ln} 行第 {col} 列 —— {msg}",
+                   "Not valid JSON: {p}\n  At line {ln}, column {col} — {msg}",
+                   p=src, ln=e.lineno, col=e.colno, msg=e.msg))
 
     if args.avatar:
         av = Path(args.avatar)
         if not av.exists():
-            sys.exit(f"头像文件不存在：{av}")
+            sys.exit(T("头像文件不存在：{p}", "Avatar file not found: {p}", p=av))
         base = av.read_bytes()
         if not base.startswith(SIG):
-            sys.exit(f"头像不是 PNG：{av}\n  提示：先用画图/PS 另存为 PNG 再试。")
+            sys.exit(T("头像不是 PNG：{p}\n  提示：先用画图/PS 另存为 PNG 再试。",
+                       "The avatar is not a PNG: {p}\n  Tip: re-save it as PNG first.",
+                       p=av))
     else:
         base = solid_gradient_png()
-        print("未提供头像，已生成渐变占位图（可用 --avatar 换成自己的图）")
+        print(T("未提供头像，已生成渐变占位图（可用 --avatar 换成自己的图）",
+                "No avatar given; generated a gradient placeholder (use --avatar to supply your own)."))
 
     v2_json = json.dumps(card, ensure_ascii=False, separators=(",", ":"))
     v3_json = json.dumps(to_v3(card), ensure_ascii=False, separators=(",", ":"))
@@ -107,11 +126,14 @@ def main():
     dst = Path(args.output)
     dst.write_bytes(out)
     name = (card.get("data") or card).get("name", "(未命名)")
-    print(f"已写出：{dst}")
-    print(f"  角色：{name}")
-    print(f"  chara 块（V2）：{len(v2_json)} 字符 → base64 后 {len(base64.b64encode(v2_json.encode()))} 字符")
-    print(f"  ccv3  块（V3）：{len(v3_json)} 字符")
-    print("  用法：把这个 PNG 拖进 SillyTavern 的角色列表即可。")
+    print(T("已写出：{p}", "Written: {p}", p=dst))
+    print(T("  角色：{n}", "  Character: {n}", n=name))
+    print(T("  chara 块（V2）：{a} 字符 → base64 后 {b} 字符",
+            "  chunk 'chara' (V2): {a} chars -> {b} after base64",
+            a=len(v2_json), b=len(base64.b64encode(v2_json.encode()))))
+    print(T("  ccv3  块（V3）：{a} 字符", "  chunk 'ccv3'  (V3): {a} chars", a=len(v3_json)))
+    print(T("  用法：把这个 PNG 拖进 SillyTavern 的角色列表即可。",
+            "  Usage: drag this PNG into the SillyTavern character list."))
 
 
 if __name__ == "__main__":

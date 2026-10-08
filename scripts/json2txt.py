@@ -24,6 +24,17 @@ import json
 import sys
 from pathlib import Path
 
+# ---- 输出语言（--lang zh|en，默认 zh）----
+LANG = "zh"
+
+
+def T(zh, en=None, **kw):
+    """面向用户的文案。默认返回中文；--lang en 时返回英文（没给英文就回退中文）。
+    两种语言都用 {name} 形式的占位符，参数走 kw；没有 kw 就不做格式化。"""
+    s = en if (LANG == "en" and en) else zh
+    return s.format(**kw) if kw else s
+
+
 
 def load_messages(path):
     """载入 JSON 并自动定位消息数组。"""
@@ -31,12 +42,19 @@ def load_messages(path):
         with open(path, encoding="utf-8") as f:
             raw = json.load(f)
     except json.JSONDecodeError as e:
-        sys.exit(f"这不是合法的 JSON 文件：{path}\n"
-                 f"  出错位置：第 {e.lineno} 行第 {e.colno} 列 —— {e.msg}\n"
-                 f"  提示：导出聊天记录时要选「JSON」格式。HTML / CSV / MHT 都要先转换。")
+        sys.exit(T("这不是合法的 JSON 文件：{p}\n"
+                   "  出错位置：第 {ln} 行第 {col} 列 —— {msg}\n"
+                   "  提示：导出聊天记录时要选「JSON」格式。HTML / CSV / MHT 都要先转换。",
+                   "Not a valid JSON file: {p}\n"
+                   "  At line {ln}, column {col} — {msg}\n"
+                   "  Tip: when exporting a chat log, choose the JSON format. HTML / CSV / MHT must be converted first.",
+                   p=path, ln=e.lineno, col=e.colno, msg=e.msg))
     except UnicodeDecodeError:
-        sys.exit(f"文件不是 UTF-8 编码：{path}\n"
-                 f"  提示：用记事本「另存为」选 UTF-8，或换一种导出格式。")
+        sys.exit(T("文件不是 UTF-8 编码：{p}\n"
+                   "  提示：用记事本「另存为」选 UTF-8，或换一种导出格式。",
+                   "The file is not UTF-8 encoded: {p}\n"
+                   "  Tip: re-save it as UTF-8, or export in a different format.",
+                   p=path))
 
     if isinstance(raw, list):
         return raw
@@ -52,9 +70,13 @@ def load_messages(path):
             return max(lists, key=len)
 
     keys = list(raw)[:10] if isinstance(raw, dict) else "（不是字典）"
-    sys.exit(f"认不出这份 JSON 的结构：{path}\n"
-             f"  最外层应该是消息数组 [{{...}}, ...]，或者包在 messages / data / chat / records 里。\n"
-             f"  这份文件最外层是 {type(raw).__name__}，里面的键是：{keys}")
+    sys.exit(T("认不出这份 JSON 的结构：{p}\n"
+               "  最外层应该是消息数组 [{{...}}, ...]，或者包在 messages / data / chat / records 里。\n"
+               "  这份文件最外层是 {tp}，里面的键是：{keys}",
+               "Unrecognized JSON structure: {p}\n"
+               "  The top level should be an array of messages [{{...}}, ...], or wrap one in messages / data / chat / records.\n"
+               "  This file's top level is {tp}; its keys are: {keys}",
+               p=path, tp=type(raw).__name__, keys=keys))
 
 
 def pick(msg, *keys):
@@ -108,11 +130,15 @@ def main():
                     help="只列出所有发言人及消息数，不做转换")
     ap.add_argument("--keep-non-text", action="store_true",
                     help="保留非文本消息（默认保留，标记为 [类型]）")
+    ap.add_argument("--lang", choices=["zh", "en"], default="zh",
+                    help="输出语言：zh（默认）中文 / en English")
     args = ap.parse_args()
+    global LANG
+    LANG = args.lang
 
     src = Path(args.input)
     if not src.exists():
-        sys.exit(f"输入文件不存在：{src}")
+        sys.exit(T("输入文件不存在：{p}", "Input file not found: {p}", p=src))
 
     msgs = load_messages(src)
 
@@ -121,16 +147,19 @@ def main():
         for m in msgs:
             _, sender, _, _ = normalize(m)
             counts[sender or "(空)"] = counts.get(sender or "(空)", 0) + 1
-        print(f"共 {len(msgs)} 条消息，发言人：")
+        print(T("共 {n} 条消息，发言人：", "{n} messages, speakers:", n=len(msgs)))
         for name, n in sorted(counts.items(), key=lambda x: -x[1]):
-            print(f"  {name or '(空)'}  × {n}")
+            print(f"  {name or T('(空)', '(none)')}  × {n}")
         return
 
     dst = Path(args.output) if args.output else src.with_suffix(".txt")
 
     if not msgs:
-        sys.exit(f"文件里没找到任何消息：{src}\n"
-                 f"  提示：JSON 最外层应该是消息数组，或包在 messages / data / chat 字段里。")
+        sys.exit(T("文件里没找到任何消息：{p}\n"
+                   "  提示：JSON 最外层应该是消息数组，或包在 messages / data / chat 字段里。",
+                   "No messages found in the file: {p}\n"
+                   "  Tip: the top level should be a message array, or wrapped in a messages / data / chat field.",
+                   p=src))
 
     out_lines = []
     kept = 0
@@ -154,28 +183,40 @@ def main():
         kept += 1
 
     if kept == 0:
-        sys.exit(f"载入 {len(msgs)} 条，但一条都没转换出来（全部跳过）。\n"
-                 f"  常见原因：\n"
-                 f"    1. 时间字段名不在候选键里（支持 time / timestamp / createTime / date / ts）\n"
-                 f"    2. 内容字段名不在候选键里（支持 content / text / message / msg）\n"
-                 f"    3. 全是图片/语音这类非文本消息（可加 --keep-non-text 保留占位）\n"
-                 f"  先跑一次 --list-senders 看看结构对不对。")
+        sys.exit(T("载入 {n} 条，但一条都没转换出来（全部跳过）。\n"
+                   "  常见原因：\n"
+                   "    1. 时间字段名不在候选键里（支持 time / timestamp / createTime / date / ts）\n"
+                   "    2. 内容字段名不在候选键里（支持 content / text / message / msg）\n"
+                   "    3. 全是图片/语音这类非文本消息（可加 --keep-non-text 保留占位）\n"
+                   "  先跑一次 --list-senders 看看结构对不对。",
+                   "Read {n} messages but converted none (all skipped).\n"
+                   "  Common causes:\n"
+                   "    1. Time field name not among the candidates (time / timestamp / createTime / date / ts)\n"
+                   "    2. Content field name not among the candidates (content / text / message / msg)\n"
+                   "    3. Everything is non-text (images/voice); add --keep-non-text to keep placeholders\n"
+                   "  Run --list-senders first to check the structure.",
+                   n=len(msgs)))
 
     dst.write_text("\n".join(out_lines), encoding="utf-8")
 
-    print(f"载入 {len(msgs)} 条，写出 {kept} 条，跳过 {skipped} 条")
+    print(T("载入 {n} 条，写出 {k} 条，跳过 {s} 条",
+            "Loaded {n}, wrote {k}, skipped {s}",
+            n=len(msgs), k=kept, s=skipped))
     print(f"-> {dst}")
 
     # 校验：如果给了名字，提示实际命中数量
     if args.char_name or args.user_name:
         text = dst.read_text(encoding="utf-8")
         if args.char_name:
-            print(f"  对方名「{args.char_name}」出现行数："
-                  f"{text.count(args.char_name)}")
+            print(T("  对方名「{c}」出现行数：{n}",
+                    "  Lines matching the character name \"{c}\": {n}",
+                    c=args.char_name, n=text.count(args.char_name)))
         if args.user_name:
-            print(f"  本人名「{args.user_name}」出现行数："
-                  f"{text.count(args.user_name)}")
-        print("  提示：数字应接近消息条数，偏差过大说明名字没对上")
+            print(T("  本人名「{u}」出现行数：{n}",
+                    "  Lines matching the user name \"{u}\": {n}",
+                    u=args.user_name, n=text.count(args.user_name)))
+        print(T("  提示：数字应接近消息条数，偏差过大说明名字没对上",
+                "  Tip: each count should be close to the message total; a big gap means the names don't match"))
 
 
 if __name__ == "__main__":
