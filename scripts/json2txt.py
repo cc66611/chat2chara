@@ -6,6 +6,7 @@ json2txt.py — 把通用聊天记录 JSON 转成管道标准 txt 格式
 支持的输入结构（自动识别）：
   1. 消息数组：[{"time": "...", "sender": "...", "content": "...", "type": 1}, ...]
   2. 带包裹：  {"messages": [...]} / {"data": [...]} / {"chat": [...]}
+  3. 文本为分段数组（Telegram 式富文本）："text": ["今天", {"type":"bold","text":"超累"}]
 
 输出格式（管道统一标准）：
     时间行
@@ -54,11 +55,34 @@ def pick(msg, *keys):
     return ""
 
 
+def flat_text(v):
+    """把文本字段拍平成字符串。
+
+    有些平台（Telegram 等）的 text 是分段数组，用来表示富文本：
+        ["今天", {"type": "bold", "text": "超累"}]
+    直接 str() 会得到一串 Python 字面量。这里按键取片段再拼接。
+    """
+    if isinstance(v, list):
+        parts = []
+        for seg in v:
+            if isinstance(seg, str):
+                parts.append(seg)
+            elif isinstance(seg, dict):
+                parts.append(str(seg.get("text", "")))
+            else:
+                parts.append(str(seg))
+        return "".join(parts)
+    return str(v)
+
+
 def normalize(msg):
     """把一条消息规范成 (time, sender, content, type)。"""
     ts = str(pick(msg, "time", "timestamp", "createTime", "date", "ts"))
+    # ISO 风格时间（2024-03-01T21:22:00）归一成管道惯用的空格分隔
+    if len(ts) > 10 and ts[10] == "T":
+        ts = ts[:10] + " " + ts[11:]
     sender = str(pick(msg, "sender", "senderName", "from", "talker", "nickname", "name"))
-    content = str(pick(msg, "content", "text", "message", "msg"))
+    content = flat_text(pick(msg, "content", "text", "message", "msg"))
     mtype = pick(msg, "type", "msgType") or 1
     return ts, sender, content, mtype
 
@@ -102,7 +126,7 @@ def main():
             skipped += 1
             continue
         # 非文本消息：保留为占位标记，让上下文不断裂
-        if str(mtype) not in ("1", "text", "Text") and not content.startswith("["):
+        if str(mtype) not in ("1", "text", "Text", "message", "Message") and not content.startswith("["):
             if args.keep_non_text:
                 content = f"[{mtype}]"
             else:
