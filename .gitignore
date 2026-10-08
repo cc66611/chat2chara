@@ -1,0 +1,46 @@
+# 真实聊天记录与导出的角色卡 —— 绝不入库
+*.json
+!templates/*.json
+!examples/demo_*.json
+
+# 但允许 demo 数据（虚构）
+!examples/demo_chat.json
+
+# 输出产物
+stats.txt
+*_stats.txt
+sampled*.txt
+chat.txt
+validate.txt
+*_result.txt
+
+# 常见聊天记录导出目录名
+wx_export/
+chat_export/
+exports/
+raw/
+private/
+personal/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# 本地测试日志
+_test_log.txt
+
+# 注意：Git 规则「后匹配者赢」，所以豁免必须放在最后
+!examples/demo_*.txt
