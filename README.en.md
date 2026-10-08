@@ -6,7 +6,7 @@ Turn a chat log into a working AI character card — **built from real statistic
 
 **If you have a conversation history with tens of thousands of messages**, and every card maker out there only lets you *describe* a person — that description can't capture how they actually talk. **This tool is for you.**
 
-![The same corpus, written two ways](assets/compare-impression-vs-data.png)
+![The same corpus, written two ways](assets/compare-impression-vs-data.en.png)
 
 Left: how most character cards get written — a handful of adjectives. Right: how this tool does it — count first, write after.
 
@@ -70,8 +70,10 @@ Chat log export (JSON)
 
 ---
 
-![analyze.py output](assets/screenshot-analyze.png)
+![analyze.py output](assets/screenshot-analyze.en.png)
 
+> **Language note:** the scripts print their status in Chinese by default. `analyze.py` accepts `--lang en` for an English report — that's what you see above. The other scripts print short status lines; the tables below give their English meaning.
+>
 > This is real output from `analyze.py` (numbers come from the fictional demo data shipped with the repo).
 > All nine dimensions are backed by numbers — copy them into the card and your settings are *evidence-based* instead of *impression-based*.
 
